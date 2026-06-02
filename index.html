@@ -264,10 +264,10 @@
             transition: background-color 0.2s ease;
         }
         input[type="number"] { width: 70px; }
-        input[type="text"].lauf-name { width: 130px; }
+        input[type="text"].lauf-name { width: 150px; }
         input[type="text"].lauf-time { width: 90px; }
         input[type="text"].lauf-pace { width: 80px; background-color: #edf2f7; cursor: not-allowed; }
-        input[type="text"].lauf-note { width: 150px; }
+        input[type="text"].lauf-note { width: 250px; }
         
         /* Schmerzklassen */
         .pain-low { background-color: #c6f6d5 !important; color: #22543d !important; font-weight: bold; }
@@ -278,46 +278,6 @@
             border-color: #3182ce;
             outline: none;
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.25);
-        }
-        
-        /* Image Preview Box */
-        .img-container {
-            position: relative;
-            width: 60px;
-            height: 45px;
-            border: 2px dashed #cbd5e0;
-            border-radius: 6px;
-            overflow: hidden;
-            background: #f7fafc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .img-container:hover { border-color: #3182ce; background: #ebf8ff; }
-        .img-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
-        .img-container span { font-size: 18px; color: #a0aec0; font-weight: bold; }
-        .img-input { display: none; }
-        
-        /* Lightbox */
-        .lightbox {
-            display: none;
-            position: fixed;
-            z-index: 999;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            align-items: center;
-            justify-content: center;
-        }
-        .lightbox img {
-            max-width: 90%;
-            max-height: 85%;
-            border-radius: 8px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
         }
         
         .info-box {
@@ -341,7 +301,7 @@
 <body>
 
 <div class="container">
-    <h1>🏃‍♂️ Trainingstagebuch (Mit Cloud-Synchronisation)</h1>
+    <h1>🏃‍♂️ Trainingstagebuch</h1>
     
     <div class="info-box">
         🔄 <strong>Synchronisation für PC & Handy:</strong> Klicke nach dem Eintragen auf <code>Exportieren</code> und speichere die Datei in deiner Cloud (z.B. iCloud, Google Drive, OneDrive). Am anderen Gerät klickst du auf <code>Importieren</code> und wählst die Datei aus. Fertig!
@@ -356,7 +316,7 @@
         <button class="btn btn-secondary" onclick="resetToDefault()">🔄 Auf Standard zurücksetzen</button>
     </div>
 
-    <!-- Status Toast Toast -->
+    <!-- Status Toast -->
     <div id="status-toast">✓ Aktion erfolgreich ausgeführt!</div>
 
     <!-- Dashboard -->
@@ -404,7 +364,6 @@
                             <th>Pace (min/km)</th>
                             <th>Schmerz (0-10)</th>
                             <th>Notizen & Wetter</th>
-                            <th>Streckenbild</th>
                         </tr>
                     </thead>
                     <tbody id="training-body">
@@ -462,28 +421,24 @@
     </div>
 </div>
 
-<div class="lightbox" id="lightbox" onclick="this.style.display='none'">
-    <img id="lightbox-img" src="" alt="Große Ansicht">
-</div>
-
 <script>
-    // Standard-Datensatz mit neuer Spalte "time"
+    // Standard-Datensatz ohne Bild-Spalte
     const defaultData = [
-        {kw: "Start", p10: "5,40 km", name: "Basis-Check", run: 5.4, time: "32:24", pace: "6:00", pain: 0, note: "Gutes Wetter", img: ""},
-        {kw: "19", p10: "5,70 km", name: "Erster Langlauf", run: 8.2, time: "47:50", pace: "5:50", pain: 2, note: "Beine locker", img: ""},
-        {kw: "20", p10: "6,27 km", name: "Rückschlag-Lauf", run: 7.0, time: "43:45", pace: "6:15", pain: 5, note: "Wadenziehen, warm", img: ""},
-        {kw: "21", p10: "6,89 km", name: "Regeneration", run: 6.5, time: "38:27", pace: "5:55", pain: 2, note: "Schnitt okay", img: ""},
-        {kw: "22", p10: "7,59 km", name: "Stabilisierung", run: 7.0, time: "39:40", pace: "5:40", pain: 2, note: "Neue Schuhe", img: ""},
-        {kw: "23", p10: "8,35 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "24", p10: "9,18 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "25", p10: "10,10 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "26", p10: "11,11 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "27", p10: "12,22 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "28", p10: "13,44 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "29", p10: "14,78 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "30", p10: "16,26 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "31", p10: "17,89 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
-        {kw: "32", p10: "19,68 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""}
+        {kw: "Start", p10: "5,40 km", name: "Basis-Check", run: 5.4, time: "32:24", pace: "6:00", pain: 0, note: "Gutes Wetter"},
+        {kw: "19", p10: "5,70 km", name: "Erster Langlauf", run: 8.2, time: "47:50", pace: "5:50", pain: 2, note: "Beine locker"},
+        {kw: "20", p10: "6,27 km", name: "Rückschlag-Lauf", run: 7.0, time: "43:45", pace: "6:15", pain: 5, note: "Wadenziehen, warm"},
+        {kw: "21", p10: "6,89 km", name: "Regeneration", run: 6.5, time: "38:27", pace: "5:55", pain: 2, note: "Schnitt okay"},
+        {kw: "22", p10: "7,59 km", name: "Stabilisierung", run: 7.0, time: "39:40", pace: "5:40", pain: 2, note: "Neue Schuhe"},
+        {kw: "23", p10: "8,35 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "24", p10: "9,18 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "25", p10: "10,10 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "26", p10: "11,11 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "27", p10: "12,22 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "28", p10: "13,44 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "29", p10: "14,78 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "30", p10: "16,26 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "31", p10: "17,89 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
+        {kw: "32", p10: "19,68 km", name: "", run: "", time: "", pace: "", pain: "", note: ""}
     ];
 
     let currentData = JSON.parse(localStorage.getItem("runningPlanData")) || defaultData;
@@ -499,7 +454,7 @@
         setTimeout(() => { toast.style.display = "none"; }, 3000);
     }
 
-    // CLOUD EXPORT / IMPORT LOGIK
+    // EXPORT / IMPORT LOGIK (Jetzt wieder superschnell ohne schwere Bilder)
     function exportDataCloud() {
         const exportPackage = {
             data: currentData,
@@ -512,7 +467,7 @@
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
-        showToast("📥 laufdaten.json heruntergeladen! Sichere sie in deiner Cloud.");
+        showToast("📥 laufdaten.json heruntergeladen! Sicher in deiner Cloud.");
     }
 
     function triggerImport() {
@@ -531,22 +486,20 @@
                     currentData = imported.data;
                     targetRaceDate = imported.raceDate || "";
                     
-                    // Permanent im Browser sichern
                     localStorage.setItem("runningPlanData", JSON.stringify(currentData));
                     localStorage.setItem("runningRaceDate", targetRaceDate);
                     
-                    // Ansicht neu aufbauen
                     renderTable();
                     showToast("⚡ Synchronisation erfolgreich! Alle Läufe importiert.");
                 } else {
                     alert("Fehler: Ungültiges Dateiformat.");
                 }
             } catch (err) {
-                alert("Fehler beim Lesen der Datei. Bist du sicher, dass es die laufdaten.json ist?");
+                alert("Fehler beim Lesen der Datei.");
             }
         };
         reader.readAsText(file);
-        input.value = ""; // Reset
+        input.value = "";
     }
 
     function timeStringToSeconds(timeStr) {
@@ -594,27 +547,9 @@
                 <td><input type="text" class="lauf-pace" id="pace-${index}" value="${row.pace || ''}" placeholder="--" readonly></td>
                 <td><input type="number" min="0" max="10" class="lauf-pain ${painClass}" value="${row.pain}" placeholder="--" oninput="updateField(${index}, 'pain', this.value)"></td>
                 <td><input type="text" class="lauf-note" value="${row.note || ''}" placeholder="z.B. Warm, Wind..." oninput="updateField(${index}, 'note', this.value)"></td>
-                <td>
-                    <div class="img-container" id="container-${index}">
-                        <span style="display: ${row.img ? 'none' : 'block'}">+</span>
-                        <img src="${row.img || ''}" id="img-${index}" style="display: ${row.img ? 'block' : 'none'}">
-                    </div>
-                    <input type="file" class="img-input" accept="image/*" onchange="uploadImage(${index}, this)">
-                </td>
             `;
             
             tbody.appendChild(tr);
-            
-            const imgDiv = tr.querySelector(".img-container");
-            imgDiv.onclick = function() {
-                if(currentData[index].img) {
-                    const lightbox = document.getElementById('lightbox');
-                    document.getElementById('lightbox-img').src = currentData[index].img;
-                    lightbox.style.display = 'flex';
-                } else {
-                    tr.querySelector(".img-input").click();
-                }
-            };
         });
         
         updateCalculations();
@@ -627,7 +562,7 @@
             currentData[index].run = value !== "" ? parseFloat(value) : "";
             calculatePace(index);
         }
-        else if(field === 'time') {
+        if(field === 'time') {
             currentData[index].time = value;
             calculatePace(index);
         }
@@ -786,7 +721,7 @@
                         { label: 'Tatsächliche Distanz', data: actualData, borderColor: '#48bb78', backgroundColor: 'rgba(72, 187, 120, 0.15)', borderWidth: 3, pointBackgroundColor: '#38a169', fill: true, spanGaps: true }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, suggestedMax: 22 } } }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, bandwidth: 0, suggestedMax: 22 } } }
             });
         }
 
@@ -828,21 +763,6 @@
                     }
                 }
             });
-        }
-    }
-
-    function uploadImage(index, fileInput) {
-        const file = fileInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                currentData[index].img = e.target.result;
-                const img = document.getElementById(`img-${index}`);
-                const span = document.getElementById(`container-${index}`).querySelector('span');
-                img.src = e.target.result; img.style.display = 'block'; span.style.display = 'none';
-                saveData(false);
-            };
-            reader.readAsDataURL(file);
         }
     }
 
