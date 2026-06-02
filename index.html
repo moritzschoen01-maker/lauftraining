@@ -203,6 +203,12 @@
         .btn-secondary { background-color: #e2e8f0; color: #4a5568; }
         .btn-secondary:hover { background-color: #cbd5e0; }
         
+        /* Sync Buttons */
+        .btn-export { background-color: #3182ce; color: white; box-shadow: 0 4px 6px rgba(49, 130, 206, 0.2); }
+        .btn-export:hover { background-color: #2b6cb0; }
+        .btn-import { background-color: #805ad5; color: white; box-shadow: 0 4px 6px rgba(128, 90, 213, 0.2); }
+        .btn-import:hover { background-color: #6b46c1; }
+        
         /* Status Notification Toast */
         #status-toast {
             display: none;
@@ -322,6 +328,7 @@
             margin-bottom: 25px;
             font-size: 14px;
         }
+        #file-import-input { display: none; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         @media (min-width: 1150px) {
@@ -334,20 +341,23 @@
 <body>
 
 <div class="container">
-    <h1>🏃‍♂️ Trainingstagebuch (Dauerhaft Speicherbar)</h1>
+    <h1>🏃‍♂️ Trainingstagebuch (Mit Cloud-Synchronisation)</h1>
     
     <div class="info-box">
-        ⏱️ <strong>Tipp zur Zeiteingabe:</strong> Gib deine gesamte Laufzeit einfach als <code>Minuten:Sekunden</code> (z.B. 45:30) oder bei langen Läufen als <code>Stunden:Minuten:Sekunden</code> (z.B. 1:15:00) ein. Die Pace wird vollautomatisch berechnet.
+        🔄 <strong>Synchronisation für PC & Handy:</strong> Klicke nach dem Eintragen auf <code>Exportieren</code> und speichere die Datei in deiner Cloud (z.B. iCloud, Google Drive, OneDrive). Am anderen Gerät klickst du auf <code>Importieren</code> und wählst die Datei aus. Fertig!
     </div>
 
     <!-- Toolbar Buttons -->
     <div class="toolbar">
-        <button class="btn btn-primary" onclick="saveData(true)">💾 Änderungen dauerhaft speichern</button>
+        <button class="btn btn-primary" onclick="saveData(true)">💾 Änderungen im Browser sichern</button>
+        <button class="btn btn-export" onclick="exportDataCloud()">📤 Daten in Cloud-Datei exportieren</button>
+        <button class="btn btn-import" onclick="triggerImport()">📥 Aus Cloud-Datei importieren</button>
+        <input type="file" id="file-import-input" accept=".json" onchange="importDataCloud(this)">
         <button class="btn btn-secondary" onclick="resetToDefault()">🔄 Auf Standard zurücksetzen</button>
     </div>
 
     <!-- Status Toast Toast -->
-    <div id="status-toast">✓ Daten erfolgreich im Browser gespeichert!</div>
+    <div id="status-toast">✓ Aktion erfolgreich ausgeführt!</div>
 
     <!-- Dashboard -->
     <div class="dashboard-grid">
@@ -457,7 +467,7 @@
 </div>
 
 <script>
-    // Standard-Datensatz mit neuer Spalte "time" (Pace wird berechnet)
+    // Standard-Datensatz mit neuer Spalte "time"
     const defaultData = [
         {kw: "Start", p10: "5,40 km", name: "Basis-Check", run: 5.4, time: "32:24", pace: "6:00", pain: 0, note: "Gutes Wetter", img: ""},
         {kw: "19", p10: "5,70 km", name: "Erster Langlauf", run: 8.2, time: "47:50", pace: "5:50", pain: 2, note: "Beine locker", img: ""},
@@ -482,23 +492,76 @@
     let paceChart = null;
     let countdownInterval = null;
 
-    // Hilfsfunktion: Wandelt Zeiteingabe (H:MM:SS oder MM:SS) in Sekunden um
+    function showToast(message) {
+        const toast = document.getElementById("status-toast");
+        toast.innerText = message;
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 3000);
+    }
+
+    // CLOUD EXPORT / IMPORT LOGIK
+    function exportDataCloud() {
+        const exportPackage = {
+            data: currentData,
+            raceDate: targetRaceDate
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPackage));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "laufdaten.json");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast("📥 laufdaten.json heruntergeladen! Sichere sie in deiner Cloud.");
+    }
+
+    function triggerImport() {
+        document.getElementById('file-import-input').click();
+    }
+
+    function importDataCloud(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.data && Array.isArray(imported.data)) {
+                    currentData = imported.data;
+                    targetRaceDate = imported.raceDate || "";
+                    
+                    // Permanent im Browser sichern
+                    localStorage.setItem("runningPlanData", JSON.stringify(currentData));
+                    localStorage.setItem("runningRaceDate", targetRaceDate);
+                    
+                    // Ansicht neu aufbauen
+                    renderTable();
+                    showToast("⚡ Synchronisation erfolgreich! Alle Läufe importiert.");
+                } else {
+                    alert("Fehler: Ungültiges Dateiformat.");
+                }
+            } catch (err) {
+                alert("Fehler beim Lesen der Datei. Bist du sicher, dass es die laufdaten.json ist?");
+            }
+        };
+        reader.readAsText(file);
+        input.value = ""; // Reset
+    }
+
     function timeStringToSeconds(timeStr) {
         if (!timeStr || !timeStr.includes(':')) return null;
         const parts = timeStr.split(':').map(Number);
         if (parts.some(isNaN)) return null;
         
         if (parts.length === 3) {
-            // hh:mm:ss
             return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
         } else if (parts.length === 2) {
-            // mm:ss
             return (parts[0] * 60) + parts[1];
         }
         return null;
     }
 
-    // Hilfsfunktion: Wandelt Sekunden zurück in Pace-String (MM:SS)
     function secondsToPaceString(totalSeconds) {
         if (!totalSeconds || isNaN(totalSeconds) || totalSeconds === Infinity) return "";
         const min = Math.floor(totalSeconds / 60);
@@ -586,7 +649,6 @@
         saveData(false);
     }
 
-    // Automatische Pace-Berechnung pro Tabellenzeile
     function calculatePace(index) {
         const row = currentData[index];
         const km = parseFloat(row.run);
@@ -604,7 +666,6 @@
         }
     }
 
-    // COUNTDOWN LOGIK
     function updateRaceDate(val) {
         targetRaceDate = val;
         localStorage.setItem("runningRaceDate", targetRaceDate);
@@ -698,7 +759,6 @@
             document.getElementById("best-pace-info").innerText = "Trage Strecke und Zeit ein.";
         }
 
-        // Trophäen-Logik
         document.getElementById("badge-5k").classList.toggle("unlocked", maxRun >= 5.0);
         document.getElementById("badge-10k").classList.toggle("unlocked", maxRun >= 10.0);
         document.getElementById("badge-15k").classList.toggle("unlocked", maxRun >= 15.0);
@@ -711,7 +771,6 @@
         const actualData = currentData.map(row => row.run !== "" ? parseFloat(row.run) : null);
         const paceData = currentData.map(row => row.pace ? paceToDecimalMinutes(row.pace) : null);
 
-        // --- DIAGRAMM 1 ---
         if (runningChart) {
             runningChart.data.datasets[0].data = plan10Data;
             runningChart.data.datasets[1].data = actualData;
@@ -731,7 +790,6 @@
             });
         }
 
-        // --- DIAGRAMM 2 ---
         if (paceChart) {
             paceChart.data.datasets[0].data = actualData;
             paceChart.data.datasets[1].data = paceData;
@@ -755,22 +813,15 @@
                         yPace: {
                             type: 'linear', position: 'right', title: { display: true, text: 'Tempo (Pace)', font: { weight: 'bold' } },
                             reverse: true, suggestedMin: 4.5, suggestedMax: 7.5, grid: { drawOnChartArea: false },
-                            ticks: {
-                                callback: function(value) {
-                                    return secondsToPaceString(Math.round(value * 60));
-                                }
-                            }
+                            ticks: { callback: function(value) { return secondsToPaceString(Math.round(value * 60)); } }
                         }
                     },
                     plugins: {
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    if(context.datasetIndex === 0) {
-                                        return `Strecke: ${context.raw ? context.raw.toFixed(1) + ' km' : '--'}`;
-                                    } else {
-                                        return `Pace: ${context.raw ? secondsToPaceString(Math.round(context.raw * 60)) + ' min/km' : '--'}`;
-                                    }
+                                    if(context.datasetIndex === 0) { return `Strecke: ${context.raw ? context.raw.toFixed(1) + ' km' : '--'}`; }
+                                    else { return `Pace: ${context.raw ? secondsToPaceString(Math.round(context.raw * 60)) + ' min/km' : '--'}`; }
                                 }
                             }
                         }
@@ -797,11 +848,7 @@
 
     function saveData(showAlert) {
         localStorage.setItem("runningPlanData", JSON.stringify(currentData));
-        if(showAlert) {
-            const toast = document.getElementById("status-toast");
-            toast.style.display = "block";
-            setTimeout(() => { toast.style.display = "none"; }, 3000);
-        }
+        if(showAlert) showToast("✓ Daten im Browser gesichert!");
     }
 
     function resetToDefault() {
