@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lauftraining - Permanentes Trainingstagebuch</title>
+    <!-- Chart.js für die interaktiven Diagramme -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #2d3748;
+            line-height: 1.6;
+            margin: 0;
+            padding: 30px 15px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #1a365d;
+            border-bottom: 3px solid #3182ce;
+            padding-bottom: 12px;
+            margin-top: 0;
+            font-size: 26px;
+        }
+        h2 {
+            color: #2b6cb0;
+            font-size: 18px;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            border-left: 5px solid #3182ce;
+            padding-left: 12px;
+        }
+        
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card-accent {
+            background: linear-gradient(135deg, #1a365d, #2b6cb0);
+            color: white;
+            border: none;
+        }
+        .card-accent h3 { color: #ebf8ff; }
+        
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #718096;
+        }
+        .metric {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 5px 0;
+        }
+        .metric-unit {
+            font-size: 16px;
+            font-weight: 400;
+            color: #718096;
+        }
+
+        /* Kalender / Countdown Widget Styles */
+        .calendar-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 5px;
+        }
+        .date-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .date-picker-container label { color: #cbd5e0; }
+        .target-date-input {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+        }
+        .target-date-input::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .countdown-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            border-left: 4px solid #48bb78;
+        }
+        .countdown-time {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #ffffff;
+        }
+        .countdown-subtext {
+            font-size: 11px;
+            color: #a0aec0;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+        
+        /* Layout Grid */
+        .main-content-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        .charts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .chart-wrapper {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.01);
+        }
+
+        /* Gamification */
+        .milestones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .badge-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+            filter: grayscale(100%);
+            opacity: 0.4;
+        }
+        .badge-card.unlocked {
+            filter: grayscale(0%);
+            opacity: 1;
+            background: #fff;
+            border-color: #f6e05e;
+            box-shadow: 0 4px 12px rgba(246, 224, 94, 0.15);
+            transform: translateY(-2px);
+        }
+        .badge-icon { font-size: 28px; margin-bottom: 5px; }
+        .badge-title { font-size: 12px; font-weight: 700; color: #2d3748; }
+        .badge-desc { font-size: 10px; color: #718096; margin-top: 2px; }
+
+        /* Toolbar Buttons */
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background-color: #2f855a;
+            color: white;
+            box-shadow: 0 4px 6px rgba(47, 133, 90, 0.2);
+        }
+        .btn-primary:hover { background-color: #22543d; }
+        .btn-secondary { background-color: #e2e8f0; color: #4a5568; }
+        .btn-secondary:hover { background-color: #cbd5e0; }
+        
+        /* Status Notification Toast */
+        #status-toast {
+            display: none;
+            background-color: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s;
+        }
+
+        /* Table Design */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            text-align: left;
+        }
+        th {
+            background-color: #2b6cb0;
+            color: white;
+            padding: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 13.5px;
+            vertical-align: middle;
+        }
+        tr:hover { background-color: #f7fafc; }
+        
+        /* Form Inputs */
+        input[type="number"], input[type="text"] {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13.5px;
+            color: #2d3748;
+            background-color: #fff;
+            box-sizing: border-box;
+            transition: background-color 0.2s ease;
+        }
+        input[type="number"] { width: 70px; }
+        input[type="text"].lauf-name { width: 130px; }
+        input[type="text"].lauf-time { width: 90px; }
+        input[type="text"].lauf-pace { width: 80px; background-color: #edf2f7; cursor: not-allowed; }
+        input[type="text"].lauf-note { width: 150px; }
+        
+        /* Schmerzklassen */
+        .pain-low { background-color: #c6f6d5 !important; color: #22543d !important; font-weight: bold; }
+        .pain-med { background-color: #feebc8 !important; color: #c05621 !important; font-weight: bold; }
+        .pain-high { background-color: #fed7d7 !important; color: #9b2c2c !important; font-weight: bold; }
+
+        input:focus {
+            border-color: #3182ce;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.25);
+        }
+        
+        /* Image Preview Box */
+        .img-container {
+            position: relative;
+            width: 60px;
+            height: 45px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f7fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .img-container:hover { border-color: #3182ce; background: #ebf8ff; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .img-container span { font-size: 18px; color: #a0aec0; font-weight: bold; }
+        .img-input { display: none; }
+        
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            align-items: center;
+            justify-content: center;
+        }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 85%;
+            border-radius: 8px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+        }
+        
+        .info-box {
+            background-color: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (min-width: 1150px) {
+            .main-content-layout {
+                grid-template-columns: 4fr 3fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏃‍♂️ Trainingstagebuch (Dauerhaft Speicherbar)</h1>
+    
+    <div class="info-box">
+        ⏱️ <strong>Tipp zur Zeiteingabe:</strong> Gib deine gesamte Laufzeit einfach als <code>Minuten:Sekunden</code> (z.B. 45:30) oder bei langen Läufen als <code>Stunden:Minuten:Sekunden</code> (z.B. 1:15:00) ein. Die Pace wird vollautomatisch berechnet.
+    </div>
+
+    <!-- Toolbar Buttons -->
+    <div class="toolbar">
+        <button class="btn btn-primary" onclick="saveData(true)">💾 Änderungen dauerhaft speichern</button>
+        <button class="btn btn-secondary" onclick="resetToDefault()">🔄 Auf Standard zurücksetzen</button>
+    </div>
+
+    <!-- Status Toast Toast -->
+    <div id="status-toast">✓ Daten erfolgreich im Browser gespeichert!</div>
+
+    <!-- Dashboard -->
+    <div class="dashboard-grid">
+        <div class="card card-accent">
+            <h3 style="margin-bottom: 5px;">📅 Ziel: Halbmarathon</h3>
+            <div class="calendar-widget">
+                <div class="date-picker-container">
+                    <label for="race-date">Termin:</label>
+                    <input type="date" id="race-date" class="target-date-input" onchange="updateRaceDate(this.value)">
+                </div>
+                <div class="countdown-display" id="countdown-container">
+                    <div class="countdown-time" id="countdown-text">Datum wählen...</div>
+                    <div class="countdown-subtext" id="countdown-sub">Zeit bis zum Start</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Weitester Lauf</h3>
+            <div class="metric" id="max-run-metric">-- <span class="metric-unit">km</span></div>
+            <p style="margin: 0; color: #4a5568; font-size: 13px;">Erzielt mit deinem Top-Lauf.</p>
+        </div>
+
+        <div class="card">
+            <h3>Beste Pace</h3>
+            <div class="metric" id="best-pace-metric">-- <span class="metric-unit">min/km</span></div>
+            <p style="margin: 0; color: #4a5568; font-size: 13px;" id="best-pace-info">Aus deinen Einträgen ermittelt.</p>
+        </div>
+    </div>
+
+    <div class="main-content-layout">
+        <!-- Linke Spalte: Tabelle -->
+        <div>
+            <h2>📋 Deine Läufe im Detail überarbeiten</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>KW</th>
+                            <th>Plan (+10%)</th>
+                            <th>Bezeichnung des Laufs</th>
+                            <th>Tatsächlich (km)</th>
+                            <th>Zeit (hh:mm:ss)</th>
+                            <th>Pace (min/km)</th>
+                            <th>Schmerz (0-10)</th>
+                            <th>Notizen & Wetter</th>
+                            <th>Streckenbild</th>
+                        </tr>
+                    </thead>
+                    <tbody id="training-body">
+                        <!-- Wird dynamisch befüllt -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Diagramme & Meilensteine -->
+        <div class="charts-container">
+            <!-- Diagramm 1: Kilometer-Steigerungs-Vergleich -->
+            <div class="chart-wrapper">
+                <h2 style="margin-top:0; border-left: 5px solid #3182ce;">📈 Steigerung im Vergleich</h2>
+                <div style="position: relative; width: 100%; height: 260px;">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Diagramm 2: Gelaufene Km vs. Pace -->
+            <div class="chart-wrapper">
+                <h2 style="margin-top:0; border-left: 5px solid #805ad5;">⏱️ Gelaufene Km vs. Pace</h2>
+                <div style="position: relative; width: 100%; height: 260px;">
+                    <canvas id="paceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Meilensteine (Trophäenschrank) -->
+            <div class="chart-wrapper" style="background: #fff; border: 1px solid #e2e8f0;">
+                <h2 style="margin-top:0; border-left: 5px solid #d69e2e;">🏆 Deine Meilensteine</h2>
+                <div class="milestones-grid">
+                    <div class="badge-card" id="badge-5k">
+                        <div class="badge-icon">🥉</div>
+                        <div class="badge-title">5 km Hürde</div>
+                        <div class="badge-desc">Basis gelegt!</div>
+                    </div>
+                    <div class="badge-card" id="badge-10k">
+                        <div class="badge-icon">🥈</div>
+                        <div class="badge-title">Zweistellig!</div>
+                        <div class="badge-desc">10 km geschafft</div>
+                    </div>
+                    <div class="badge-card" id="badge-15k">
+                        <div class="badge-icon">🥇</div>
+                        <div class="badge-title">Endspurt-Bereit</div>
+                        <div class="badge-desc">15 km gemeistert</div>
+                    </div>
+                    <div class="badge-card" id="badge-pace">
+                        <div class="badge-icon">👑</div>
+                        <div class="badge-title">Pace-König</div>
+                        <div class="badge-desc">Neue Rekordzeit</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.style.display='none'">
+    <img id="lightbox-img" src="" alt="Große Ansicht">
+</div>
+
+<script>
+    // Standard-Datensatz mit neuer Spalte "time" (Pace wird berechnet)
+    const defaultData = [
+        {kw: "Start", p10: "5,40 km", name: "Basis-Check", run: 5.4, time: "32:24", pace: "6:00", pain: 0, note: "Gutes Wetter", img: ""},
+        {kw: "19", p10: "5,70 km", name: "Erster Langlauf", run: 8.2, time: "47:50", pace: "5:50", pain: 2, note: "Beine locker", img: ""},
+        {kw: "20", p10: "6,27 km", name: "Rückschlag-Lauf", run: 7.0, time: "43:45", pace: "6:15", pain: 5, note: "Wadenziehen, warm", img: ""},
+        {kw: "21", p10: "6,89 km", name: "Regeneration", run: 6.5, time: "38:27", pace: "5:55", pain: 2, note: "Schnitt okay", img: ""},
+        {kw: "22", p10: "7,59 km", name: "Stabilisierung", run: 7.0, time: "39:40", pace: "5:40", pain: 2, note: "Neue Schuhe", img: ""},
+        {kw: "23", p10: "8,35 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "24", p10: "9,18 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "25", p10: "10,10 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "26", p10: "11,11 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "27", p10: "12,22 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "28", p10: "13,44 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "29", p10: "14,78 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "30", p10: "16,26 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "31", p10: "17,89 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""},
+        {kw: "32", p10: "19,68 km", name: "", run: "", time: "", pace: "", pain: "", note: "", img: ""}
+    ];
+
+    let currentData = JSON.parse(localStorage.getItem("runningPlanData")) || defaultData;
+    let targetRaceDate = localStorage.getItem("runningRaceDate") || "";
+    let runningChart = null;
+    let paceChart = null;
+    let countdownInterval = null;
+
+    // Hilfsfunktion: Wandelt Zeiteingabe (H:MM:SS oder MM:SS) in Sekunden um
+    function timeStringToSeconds(timeStr) {
+        if (!timeStr || !timeStr.includes(':')) return null;
+        const parts = timeStr.split(':').map(Number);
+        if (parts.some(isNaN)) return null;
+        
+        if (parts.length === 3) {
+            // hh:mm:ss
+            return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+        } else if (parts.length === 2) {
+            // mm:ss
+            return (parts[0] * 60) + parts[1];
+        }
+        return null;
+    }
+
+    // Hilfsfunktion: Wandelt Sekunden zurück in Pace-String (MM:SS)
+    function secondsToPaceString(totalSeconds) {
+        if (!totalSeconds || isNaN(totalSeconds) || totalSeconds === Infinity) return "";
+        const min = Math.floor(totalSeconds / 60);
+        const sec = Math.round(totalSeconds % 60);
+        return min + ':' + (sec < 10 ? '0' + sec : sec);
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById("training-body");
+        tbody.innerHTML = "";
+        
+        currentData.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            tr.setAttribute("data-index", index);
+            
+            let painClass = "";
+            if (row.pain !== "" && row.pain !== undefined) {
+                const p = parseInt(row.pain);
+                if (p <= 2) painClass = "pain-low";
+                else if (p <= 5) painClass = "pain-med";
+                else painClass = "pain-high";
+            }
+            
+            tr.innerHTML = `
+                <td><strong>${row.kw === 'Start' ? 'Start' : 'KW ' + row.kw}</strong></td>
+                <td>${row.p10}</td>
+                <td><input type="text" class="lauf-name" value="${row.name}" oninput="updateField(${index}, 'name', this.value)"></td>
+                <td><input type="number" step="0.1" class="lauf-run" value="${row.run}" placeholder="--" oninput="updateField(${index}, 'run', this.value)"></td>
+                <td><input type="text" class="lauf-time" value="${row.time || ''}" placeholder="mm:ss" oninput="updateField(${index}, 'time', this.value)"></td>
+                <td><input type="text" class="lauf-pace" id="pace-${index}" value="${row.pace || ''}" placeholder="--" readonly></td>
+                <td><input type="number" min="0" max="10" class="lauf-pain ${painClass}" value="${row.pain}" placeholder="--" oninput="updateField(${index}, 'pain', this.value)"></td>
+                <td><input type="text" class="lauf-note" value="${row.note || ''}" placeholder="z.B. Warm, Wind..." oninput="updateField(${index}, 'note', this.value)"></td>
+                <td>
+                    <div class="img-container" id="container-${index}">
+                        <span style="display: ${row.img ? 'none' : 'block'}">+</span>
+                        <img src="${row.img || ''}" id="img-${index}" style="display: ${row.img ? 'block' : 'none'}">
+                    </div>
+                    <input type="file" class="img-input" accept="image/*" onchange="uploadImage(${index}, this)">
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+            
+            const imgDiv = tr.querySelector(".img-container");
+            imgDiv.onclick = function() {
+                if(currentData[index].img) {
+                    const lightbox = document.getElementById('lightbox');
+                    document.getElementById('lightbox-img').src = currentData[index].img;
+                    lightbox.style.display = 'flex';
+                } else {
+                    tr.querySelector(".img-input").click();
+                }
+            };
+        });
+        
+        updateCalculations();
+        renderOrUpdateCharts();
+        initCountdown();
+    }
+
+    function updateField(index, field, value) {
+        if(field === 'run') {
+            currentData[index].run = value !== "" ? parseFloat(value) : "";
+            calculatePace(index);
+        }
+        else if(field === 'time') {
+            currentData[index].time = value;
+            calculatePace(index);
+        }
+        else if(field === 'pain') {
+            currentData[index].pain = value !== "" ? parseInt(value) : "";
+            const inputEl = document.querySelector(`tr[data-index="${index}"] .lauf-pain`);
+            inputEl.className = "lauf-pain"; 
+            if (value !== "") {
+                const p = parseInt(value);
+                if (p <= 2) inputEl.classList.add("pain-low");
+                else if (p <= 5) inputEl.classList.add("pain-med");
+                else inputEl.classList.add("pain-high");
+            }
+        }
+        else currentData[index][field] = value;
+        
+        updateCalculations();
+        renderOrUpdateCharts();
+        saveData(false);
+    }
+
+    // Automatische Pace-Berechnung pro Tabellenzeile
+    function calculatePace(index) {
+        const row = currentData[index];
+        const km = parseFloat(row.run);
+        const totalSeconds = timeStringToSeconds(row.time);
+        const paceInput = document.getElementById(`pace-${index}`);
+
+        if (!isNaN(km) && km > 0 && totalSeconds) {
+            const paceSecondsPerKm = totalSeconds / km;
+            const calculatedPaceStr = secondsToPaceString(paceSecondsPerKm);
+            row.pace = calculatedPaceStr;
+            if(paceInput) paceInput.value = calculatedPaceStr;
+        } else {
+            row.pace = "";
+            if(paceInput) paceInput.value = "";
+        }
+    }
+
+    // COUNTDOWN LOGIK
+    function updateRaceDate(val) {
+        targetRaceDate = val;
+        localStorage.setItem("runningRaceDate", targetRaceDate);
+        startCountdown();
+    }
+
+    function initCountdown() {
+        if(targetRaceDate) {
+            document.getElementById("race-date").value = targetRaceDate;
+            startCountdown();
+        }
+    }
+
+    function startCountdown() {
+        if(countdownInterval) clearInterval(countdownInterval);
+        
+        function calc() {
+            const textEl = document.getElementById("countdown-text");
+            const subEl = document.getElementById("countdown-sub");
+            if(!targetRaceDate) {
+                textEl.innerText = "Datum wählen...";
+                subEl.innerText = "Zeit bis zum Start";
+                return;
+            }
+
+            const now = new Date().getTime();
+            const target = new Date(targetRaceDate + "T00:00:00").getTime();
+            const diff = target - now;
+
+            if(diff <= 0) {
+                textEl.innerText = "🎉 Race Day!";
+                subEl.innerText = "Viel Erfolg!";
+                clearInterval(countdownInterval);
+                return;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            const totalHours = Math.floor(totalMinutes / 60);
+            const totalDays = Math.floor(totalHours / 24);
+            
+            const weeks = Math.floor(totalDays / 7);
+            const days = totalDays % 7;
+            const hours = totalHours % 24;
+            const minutes = totalMinutes % 60;
+
+            textEl.innerText = weeks > 0 ? `${weeks} W, ${days} T & ${hours}:${minutes < 10 ? '0'+minutes : minutes} Std.` : `${days} Tage & ${hours}:${minutes < 10 ? '0'+minutes : minutes} Std.`;
+            subEl.innerText = "Wochen, Tage, Std. bis zum Start";
+        }
+        calc();
+        countdownInterval = setInterval(calc, 60000);
+    }
+
+    function paceToSeconds(paceStr) {
+        if(!paceStr || !paceStr.includes(':')) return null;
+        const parts = paceStr.split(':');
+        return (parseInt(parts[0]) * 60) + parseInt(parts[1]);
+    }
+
+    function paceToDecimalMinutes(paceStr) {
+        const secs = paceToSeconds(paceStr);
+        return secs ? secs / 60 : null;
+    }
+
+    function updateCalculations() {
+        let maxRun = 0;
+        let bestPaceSeconds = Infinity;
+        let bestPaceName = "";
+        
+        currentData.forEach(row => {
+            const runVal = parseFloat(row.run);
+            if (!isNaN(runVal) && runVal > 0) {
+                if (runVal > maxRun) maxRun = runVal;
+                
+                if(row.pace) {
+                    const secs = paceToSeconds(row.pace);
+                    if(secs && secs < bestPaceSeconds) {
+                        bestPaceSeconds = secs;
+                        bestPaceName = row.name || `KW ${row.kw}`;
+                    }
+                }
+            }
+        });
+        
+        document.getElementById("max-run-metric").innerHTML = maxRun.toFixed(1) + ' <span class="metric-unit">km</span>';
+        
+        if(bestPaceSeconds !== Infinity) {
+            document.getElementById("best-pace-metric").innerHTML = secondsToPaceString(bestPaceSeconds) + ' <span class="metric-unit">min/km</span>';
+            document.getElementById("best-pace-info").innerText = "Aufgestellt beim Lauf: '" + bestPaceName + "'.";
+        } else {
+            document.getElementById("best-pace-metric").innerHTML = '-- <span class="metric-unit">min/km</span>';
+            document.getElementById("best-pace-info").innerText = "Trage Strecke und Zeit ein.";
+        }
+
+        // Trophäen-Logik
+        document.getElementById("badge-5k").classList.toggle("unlocked", maxRun >= 5.0);
+        document.getElementById("badge-10k").classList.toggle("unlocked", maxRun >= 10.0);
+        document.getElementById("badge-15k").classList.toggle("unlocked", maxRun >= 15.0);
+        document.getElementById("badge-pace").classList.toggle("unlocked", bestPaceSeconds !== Infinity && bestPaceSeconds < 360); 
+    }
+
+    function renderOrUpdateCharts() {
+        const labels = currentData.map(row => row.kw === 'Start' ? 'Start' : 'KW ' + row.kw);
+        const plan10Data = currentData.map(row => parseFloat(row.p10.replace(' km', '').replace(',', '.')));
+        const actualData = currentData.map(row => row.run !== "" ? parseFloat(row.run) : null);
+        const paceData = currentData.map(row => row.pace ? paceToDecimalMinutes(row.pace) : null);
+
+        // --- DIAGRAMM 1 ---
+        if (runningChart) {
+            runningChart.data.datasets[0].data = plan10Data;
+            runningChart.data.datasets[1].data = actualData;
+            runningChart.update();
+        } else {
+            const ctx1 = document.getElementById('progressChart').getContext('2d');
+            runningChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Plan (+10% / Woche)', data: plan10Data, borderColor: '#3182ce', borderWidth: 2, borderDash: [5, 5], tension: 0.1, fill: false },
+                        { label: 'Tatsächliche Distanz', data: actualData, borderColor: '#48bb78', backgroundColor: 'rgba(72, 187, 120, 0.15)', borderWidth: 3, pointBackgroundColor: '#38a169', fill: true, spanGaps: true }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, suggestedMax: 22 } } }
+            });
+        }
+
+        // --- DIAGRAMM 2 ---
+        if (paceChart) {
+            paceChart.data.datasets[0].data = actualData;
+            paceChart.data.datasets[1].data = paceData;
+            paceChart.update();
+        } else {
+            const ctx2 = document.getElementById('paceChart').getContext('2d');
+            paceChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Gelaufene Km', type: 'bar', data: actualData, backgroundColor: 'rgba(128, 90, 213, 0.6)', borderColor: '#805ad5', borderWidth: 1, yAxisID: 'y' },
+                        { label: 'Pace (min/km)', type: 'line', data: paceData, borderColor: '#e53e3e', borderWidth: 2, pointBackgroundColor: '#e53e3e', tension: 0.1, fill: false, yAxisID: 'yPace', spanGaps: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { type: 'linear', position: 'left', title: { display: true, text: 'Strecke (km)', font: { weight: 'bold' } }, min: 0, suggestedMax: 22 },
+                        yPace: {
+                            type: 'linear', position: 'right', title: { display: true, text: 'Tempo (Pace)', font: { weight: 'bold' } },
+                            reverse: true, suggestedMin: 4.5, suggestedMax: 7.5, grid: { drawOnChartArea: false },
+                            ticks: {
+                                callback: function(value) {
+                                    return secondsToPaceString(Math.round(value * 60));
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if(context.datasetIndex === 0) {
+                                        return `Strecke: ${context.raw ? context.raw.toFixed(1) + ' km' : '--'}`;
+                                    } else {
+                                        return `Pace: ${context.raw ? secondsToPaceString(Math.round(context.raw * 60)) + ' min/km' : '--'}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function uploadImage(index, fileInput) {
+        const file = fileInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentData[index].img = e.target.result;
+                const img = document.getElementById(`img-${index}`);
+                const span = document.getElementById(`container-${index}`).querySelector('span');
+                img.src = e.target.result; img.style.display = 'block'; span.style.display = 'none';
+                saveData(false);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function saveData(showAlert) {
+        localStorage.setItem("runningPlanData", JSON.stringify(currentData));
+        if(showAlert) {
+            const toast = document.getElementById("status-toast");
+            toast.style.display = "block";
+            setTimeout(() => { toast.style.display = "none"; }, 3000);
+        }
+    }
+
+    function resetToDefault() {
+        if(confirm("Möchtest du wirklich alle eingetragenen Daten löschen?")) {
+            localStorage.removeItem("runningPlanData");
+            localStorage.removeItem("runningRaceDate");
+            currentData = JSON.parse(JSON.stringify(defaultData));
+            targetRaceDate = "";
+            document.getElementById("race-date").value = "";
+            renderTable();
+        }
+    }
+
+    window.onload = renderTable;
+</script>
+
+</body>
+</html>
