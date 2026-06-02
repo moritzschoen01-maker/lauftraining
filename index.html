@@ -251,8 +251,8 @@
         }
         tr:hover { background-color: #f7fafc; }
         
-        /* Form Inputs */
-        input[type="number"], input[type="text"] {
+        /* Form Inputs & Textareas */
+        input[type="number"], input[type="text"], textarea {
             padding: 6px 10px;
             border: 1px solid #cbd5e0;
             border-radius: 6px;
@@ -264,17 +264,26 @@
             transition: background-color 0.2s ease;
         }
         input[type="number"] { width: 70px; }
-        input[type="text"].lauf-name { width: 150px; }
         input[type="text"].lauf-time { width: 90px; }
         input[type="text"].lauf-pace { width: 80px; background-color: #edf2f7; cursor: not-allowed; }
-        input[type="text"].lauf-note { width: 250px; }
+        
+        /* Textareas für dynamische Größe */
+        textarea {
+            resize: none; /* Verhindert manuelles Ziehen an der Ecke */
+            overflow: hidden; /* Versteckt Scrollbalken */
+            display: block;
+            min-height: 32px;
+            height: 32px;
+        }
+        textarea.lauf-name { width: 160px; }
+        textarea.lauf-note { width: 280px; }
         
         /* Schmerzklassen */
         .pain-low { background-color: #c6f6d5 !important; color: #22543d !important; font-weight: bold; }
         .pain-med { background-color: #feebc8 !important; color: #c05621 !important; font-weight: bold; }
         .pain-high { background-color: #fed7d7 !important; color: #9b2c2c !important; font-weight: bold; }
 
-        input:focus {
+        input:focus, textarea:focus {
             border-color: #3182ce;
             outline: none;
             box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.25);
@@ -422,13 +431,12 @@
 </div>
 
 <script>
-    // Standard-Datensatz ohne Bild-Spalte
     const defaultData = [
         {kw: "Start", p10: "5,40 km", name: "Basis-Check", run: 5.4, time: "32:24", pace: "6:00", pain: 0, note: "Gutes Wetter"},
         {kw: "19", p10: "5,70 km", name: "Erster Langlauf", run: 8.2, time: "47:50", pace: "5:50", pain: 2, note: "Beine locker"},
-        {kw: "20", p10: "6,27 km", name: "Rückschlag-Lauf", run: 7.0, time: "43:45", pace: "6:15", pain: 5, note: "Wadenziehen, warm"},
+        {kw: "20", p10: "6,27 km", name: "Rückschlag-Lauf", run: 7.0, time: "43:45", pace: "6:15", pain: 5, note: "Wadenziehen, sehr warm heute"},
         {kw: "21", p10: "6,89 km", name: "Regeneration", run: 6.5, time: "38:27", pace: "5:55", pain: 2, note: "Schnitt okay"},
-        {kw: "22", p10: "7,59 km", name: "Stabilisierung", run: 7.0, time: "39:40", pace: "5:40", pain: 2, note: "Neue Schuhe"},
+        {kw: "22", p10: "7,59 km", name: "Stabilisierung", run: 7.0, time: "39:40", pace: "5:40", pain: 2, note: "Neue Schuhe eingelaufen"},
         {kw: "23", p10: "8,35 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
         {kw: "24", p10: "9,18 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
         {kw: "25", p10: "10,10 km", name: "", run: "", time: "", pace: "", pain: "", note: ""},
@@ -454,7 +462,19 @@
         setTimeout(() => { toast.style.display = "none"; }, 3000);
     }
 
-    // EXPORT / IMPORT LOGIK (Jetzt wieder superschnell ohne schwere Bilder)
+    // Automatische Höhenanpassung für Textareas
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    // Wendet Resize auf alle sichtbaren Textareas an
+    function adjustAllTextareas() {
+        document.querySelectorAll('textarea').forEach(tx => {
+            autoResizeTextarea(tx);
+        });
+    }
+
     function exportDataCloud() {
         const exportPackage = {
             data: currentData,
@@ -538,15 +558,16 @@
                 else painClass = "pain-high";
             }
             
+            // Bezeichnung und Notizen nutzen jetzt <textarea> statt <input>
             tr.innerHTML = `
                 <td><strong>${row.kw === 'Start' ? 'Start' : 'KW ' + row.kw}</strong></td>
                 <td>${row.p10}</td>
-                <td><input type="text" class="lauf-name" value="${row.name}" oninput="updateField(${index}, 'name', this.value)"></td>
+                <td><textarea class="lauf-name" oninput="updateField(${index}, 'name', this.value); autoResizeTextarea(this)">${row.name || ''}</textarea></td>
                 <td><input type="number" step="0.1" class="lauf-run" value="${row.run}" placeholder="--" oninput="updateField(${index}, 'run', this.value)"></td>
                 <td><input type="text" class="lauf-time" value="${row.time || ''}" placeholder="mm:ss" oninput="updateField(${index}, 'time', this.value)"></td>
                 <td><input type="text" class="lauf-pace" id="pace-${index}" value="${row.pace || ''}" placeholder="--" readonly></td>
                 <td><input type="number" min="0" max="10" class="lauf-pain ${painClass}" value="${row.pain}" placeholder="--" oninput="updateField(${index}, 'pain', this.value)"></td>
-                <td><input type="text" class="lauf-note" value="${row.note || ''}" placeholder="z.B. Warm, Wind..." oninput="updateField(${index}, 'note', this.value)"></td>
+                <td><textarea class="lauf-note" placeholder="z.B. Warm, Wind..." oninput="updateField(${index}, 'note', this.value); autoResizeTextarea(this)">${row.note || ''}</textarea></td>
             `;
             
             tbody.appendChild(tr);
@@ -555,6 +576,9 @@
         updateCalculations();
         renderOrUpdateCharts();
         initCountdown();
+        
+        // Nach dem Rendern direkt alle Textbox-Größen anpassen
+        setTimeout(adjustAllTextareas, 50);
     }
 
     function updateField(index, field, value) {
@@ -782,6 +806,8 @@
         }
     }
 
+    // Wenn das Handy- oder Browserfenster die Größe ändert, Boxen neu berechnen
+    window.onresize = adjustAllTextareas;
     window.onload = renderTable;
 </script>
 
